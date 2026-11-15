@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mail-Assistent</title>
+<meta name="description" content="Mail-Assistent: ein lokaler E-Mail-Assistent, der Nachrichten auf dem eigenen Rechner mit einer lokalen KI einordnet und Belege findet.">
+<link rel="alternate" hreflang="en" href="index-en.html">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<header>
+<nav class="lang" aria-label="Sprache"><span aria-current="true">Deutsch</span><a href="index-en.html" lang="en" hreflang="en">English</a></nav>
+<div class="kicker">Lokal · Nur lesend · Ohne Cloud</div>
+<h1>Mail-Assistent</h1>
+<p class="lead">Ein E-Mail-Assistent, der auf deinem eigenen Rechner läuft. Er ordnet eingehende Nachrichten mit einer lokalen KI ein, fasst sie in einem Satz zusammen und findet Rechnungen und Belege.</p>
+</header>
+
+<h2>Was die Anwendung macht</h2>
+<ul>
+<li>Liest neue Nachrichten aus deinem Gmail- oder Outlook-Postfach, ausschließlich lesend.</li>
+<li>Ordnet jede Nachricht einer Kategorie zu, etwa Projektanfrage, Buchhaltung, Termin oder Newsletter, und schreibt eine kurze Zusammenfassung.</li>
+<li>Markiert Rechnungen und Belege als Kandidaten für deine Buchhaltung.</li>
+<li>Zeigt alles in einer Übersicht im Browser, die nur auf deinem Rechner erreichbar ist.</li>
+</ul>
+
+<h2>Wie sie mit deinen Daten umgeht</h2>
+<div class="card">
+<ul>
+<li><strong>Alles bleibt auf deinem Rechner.</strong> Es gibt keinen Server des Anbieters. Der Entwickler erhält keine deiner Daten.</li>
+<li><strong>Die KI läuft lokal.</strong> Die Auswertung übernimmt ein Sprachmodell auf deinem Rechner. Mailinhalte gehen an keinen KI-Dienst im Internet.</li>
+<li><strong>Nur Lesezugriff.</strong> Die Anwendung kann in deinem Postfach nichts ändern, löschen oder versenden.</li>
+<li><strong>Jederzeit widerrufbar.</strong> Du trennst ein Postfach mit einem Klick in den Einstellungen oder in deinem Google- bzw. Microsoft-Konto.</li>
+</ul>
+<p>Die Einzelheiten stehen in der <a href="datenschutz.html">Datenschutzerklärung</a>.</p>
+</div>
+
+<h2>Welche Zugriffe die Anwendung anfragt</h2>
+<div class="tablewrap">
+<table>
+<tr><th>Anbieter</th><th>Berechtigung</th><th>Wofür</th></tr>
+<tr><td>Google</td><td><code>gmail.readonly</code></td><td>Nachrichten und Anhänge lesen, um sie lokal einzuordnen</td></tr>
+<tr><td>Google, optional</td><td><code>gmail.send</code></td><td>Nur wenn du die Weiterleitung von Belegen an deine Buchhaltung ausdrücklich einschaltest. Ab Werk ausgeschaltet.</td></tr>
+<tr><td>Microsoft</td><td><code>Mail.Read</code></td><td>Nachrichten im Posteingang lesen, um sie lokal einzuordnen</td></tr>
+</table>
+</div>
+
+<h2>Stand des Projekts</h2>
+<p>Mail-Assistent ist ein privates, nicht kommerzielles Projekt in der Pilotphase. Der Quellcode wird an dieser Stelle veröffentlicht, sobald die Pilotphase abgeschlossen ist.</p>
+
+<h2>Kontakt</h2>
+<p><a href="mailto:gitihubert@gmail.com">gitihubert@gmail.com</a></p>
+
+<footer><a href="index.html">Startseite</a><a href="datenschutz.html">Datenschutzerklärung</a></footer>
+</main>
+</body>
+</html>

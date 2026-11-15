@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mail-Assistent</title>
+<meta name="description" content="Mail-Assistent: a local email assistant that categorizes messages on your own computer with a local AI model and finds invoices and receipts.">
+<link rel="alternate" hreflang="de" href="index.html">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<header>
+<nav class="lang" aria-label="Language"><a href="index.html" lang="de" hreflang="de">Deutsch</a><span aria-current="true">English</span></nav>
+<div class="kicker">Local · Read-only · No cloud</div>
+<h1>Mail-Assistent</h1>
+<p class="lead">An email assistant that runs on your own computer. It categorizes incoming messages with a local AI model, summarizes each one in a sentence, and finds invoices and receipts.</p>
+</header>
+
+<h2>What the app does</h2>
+<ul>
+<li>Reads new messages from your Gmail or Outlook mailbox, with read-only access.</li>
+<li>Assigns each message to a category, such as project inquiry, accounting, appointment or newsletter, and writes a short summary.</li>
+<li>Flags invoices and receipts as candidates for your bookkeeping.</li>
+<li>Shows everything in an overview in your browser that is reachable only from your own computer.</li>
+</ul>
+
+<h2>How it handles your data</h2>
+<div class="card">
+<ul>
+<li><strong>Everything stays on your computer.</strong> The developer runs no server and receives none of your data.</li>
+<li><strong>The AI runs locally.</strong> A language model on your computer does the analysis. Email content is not sent to any AI service on the internet.</li>
+<li><strong>Read-only access.</strong> The app cannot change, delete or send anything in your mailbox.</li>
+<li><strong>Revocable at any time.</strong> You disconnect a mailbox with one click in the settings, or in your Google or Microsoft account.</li>
+</ul>
+<p>The details are in the <a href="privacy.html">privacy policy</a>.</p>
+</div>
+
+<h2>Which permissions the app requests</h2>
+<div class="tablewrap">
+<table>
+<tr><th>Provider</th><th>Permission</th><th>Purpose</th></tr>
+<tr><td>Google</td><td><code>gmail.readonly</code></td><td>Read messages and attachments in order to categorize them locally</td></tr>
+<tr><td>Google, optional</td><td><code>gmail.send</code></td><td>Only if you explicitly turn on forwarding of receipts to your bookkeeping software. Off by default.</td></tr>
+<tr><td>Microsoft</td><td><code>Mail.Read</code></td><td>Read messages in the inbox in order to categorize them locally</td></tr>
+</table>
+</div>
+
+<h2>Project status</h2>
+<p>Mail-Assistent is a private, non-commercial project in its pilot phase. The source code will be published here once the pilot phase is complete.</p>
+
+<h2>Contact</h2>
+<p><a href="mailto:gitihubert@gmail.com">gitihubert@gmail.com</a></p>
+
+<footer><a href="index-en.html">Home</a><a href="privacy.html">Privacy policy</a></footer>
+</main>
+</body>
+</html>
