@@ -1,0 +1,23 @@
+# Private Daten: Zugänge, Passwörter, Belege, Datenbank, Protokolle – niemals hochladen
+.env
+private/*
+!private/.gitkeep
+state/*
+!state/.gitkeep
+*.sqlite3
+*.sqlite3-*
+*.log
+*.eml
+client_secret_*.json
+token*.json
+
+# Lokale Sicherungskopien
+*.orig
+*.bak
+*bak
+
+# Python und macOS
+.venv/
+__pycache__/
+*.pyc
+.DS_Store

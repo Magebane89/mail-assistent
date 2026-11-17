@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Einstellungen · Mail-Assistent</title>
+<style>
+:root{color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:#f6f8fb;color:#17283b;font-size:14px;line-height:1.5}
+.wrap{max-width:980px;margin:auto;padding:14px 20px 60px}
+a{color:#2164a3}
+button,select,input{font:inherit}
+button{padding:7px 13px;border-radius:8px;border:1px solid #d5dfea;background:#fff;color:#273b55;cursor:pointer;font-size:13px;font-weight:600}
+button.primary{background:#17283b;color:#fff;border-color:#17283b;padding:10px 16px;font-size:14px}
+button.danger{color:#b3362a}
+button:disabled{cursor:not-allowed;opacity:.4}
+button:focus-visible,input:focus,select:focus,summary:focus-visible{outline:2px solid #9cc3f5;outline-offset:1px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.top h1{font-size:20px;letter-spacing:-.3px;margin:0}
+.top .spacer{flex:1}
+h2{font-size:15px;margin:22px 0 8px}
+.flash{padding:9px 12px;background:#e9f3ff;border:1px solid #c2d9fc;border-radius:8px;margin-top:10px}
+.panel{background:#fff;border:1px solid #e3e8ee;border-radius:12px;padding:14px 16px}
+.muted{color:#68798f;font-size:13px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;color:#68798f;font-weight:600;padding:0 10px 6px 0}
+td{padding:8px 10px 8px 0;border-top:1px solid #eef2f7;vertical-align:middle;overflow-wrap:anywhere}
+td:last-child,th:last-child{text-align:right;padding-right:0}
+.tag{font-size:11px;font-weight:700;border-radius:6px;padding:3px 7px;white-space:nowrap;background:#e7f7ed;color:#16723d}
+.tag.err{background:#ffe9e7;color:#b3362a}.tag.new{background:#eff1f5;color:#697789}
+.prov{font-weight:600}
+.err{color:#b3362a;font-size:12.5px;margin-top:2px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:#fff;border:1px solid #e3e8ee;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.card h3{margin:0;font-size:15px}
+.card form{margin:0}
+details{font-size:13px}
+details>summary{cursor:pointer;color:#2164a3}
+ol{margin:8px 0;padding-left:20px}
+ol li{margin:3px 0}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#f3f6fa;border:1px solid #e3e8ee;border-radius:5px;padding:1px 5px;overflow-wrap:anywhere}
+.line{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.line input[type=text]{flex:1 1 260px;padding:7px 10px;border:1px solid #d5dfea;border-radius:8px}
+.line select{padding:7px 8px;border:1px solid #d5dfea;border-radius:8px;background:#fff}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:10px 10px 50px}}
+</style>
+</head>
+<body><main class="wrap">
+<div class="top"><h1>Einstellungen</h1><span class="spacer"></span><a href="{{ url_for('index') }}">← Zurück zur Nachrichtenliste</a></div>
+{% if note %}<div class="flash">{{ note }}</div>{% endif %}
+{% with alerts = get_flashed_messages() %}{% for text in alerts %}<div class="flash">{{ text }}</div>{% endfor %}{% endwith %}
+
+<h2>Verbundene Postfächer</h2>
+<div class="panel">
+{% if not accounts %}<span class="muted">Noch kein Postfach verbunden.</span>{% else %}
+<table>
+<tr><th>Postfach</th><th>Zugriff</th><th>Nachrichten</th><th>Letzter Abruf</th><th></th></tr>
+{% for a in accounts %}
+<tr>
+<td><span class="prov">{{ a['email'] or 'Adresse wird beim nächsten Scan ermittelt' }}</span><br><span class="muted">{{ providers.get(a['provider'], a['provider']) }}</span>{% if a['last_error'] %}<div class="err">{{ a['last_error'] }}</div>{% endif %}</td>
+<td>nur lesen</td>
+<td>{{ a['mails']|zahl }}</td>
+<td>{% if a['last_error'] %}<span class="tag err">Fehler</span>{% elif a['last_scan_at'] %}<span class="tag">in Ordnung</span>{% else %}<span class="tag new">noch kein Abruf</span>{% endif %}{% if a['last_scan_at'] %}<br><span class="muted">{{ a['last_scan_at']|datum }}</span>{% endif %}</td>
+<td><form method="post" action="{{ url_for('disconnect',account_id=a['id']) }}" data-confirm="{{ a['email'] or 'Dieses Konto' }} trennen? Der gespeicherte Zugang wird gelöscht. Bereits eingeordnete Nachrichten bleiben erhalten." onsubmit="return confirm(this.dataset.confirm)"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="danger">Trennen</button></form></td>
+</tr>
+{% endfor %}
+</table>{% endif %}
+</div>
+<p class="muted">Jeder Scan liest pro Postfach die Mails der letzten {{ days }} Tage und ordnet höchstens {{ per_run }} neue ein. Fehler eines Postfachs, etwa ein abgelaufener Zugang, erscheinen hier. Mit dem passenden Knopf unten verbindest du es erneut.</p>
+
+<h2>Postfach verbinden</h2>
+<div class="grid">
+<div class="card">
+<h3>Gmail</h3>
+<div class="muted">Du meldest dich bei Google an und erlaubst ausschließlich das Lesen deiner Mails.</div>
+<form method="post" action="{{ url_for('connect_start',provider='google') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="primary" {{ 'disabled' if not google }}>Mit Google verbinden</button></form>
+<div class="muted">{% if google %}App-Kennung: {{ google['source'] }} ✓{% else %}Es ist noch keine App-Kennung hinterlegt.{% endif %}</div>
+<details{{ ' open' if not google }}><summary>{{ 'Eigene Kennung austauschen' if google else 'Eigene Kennung einrichten' }}</summary>
+<ol>
+<li>In der <a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noreferrer">Google-Konsole</a> einen Client vom Typ „Desktop-App“ anlegen und die Gmail API aktivieren.</li>
+<li>Die Datei <code>client_secret_….json</code> herunterladen und hier auswählen.</li>
+</ol>
+<form method="post" action="{{ url_for('save_google_client') }}" enctype="multipart/form-data" class="line" {% if google and google['source']=='eigene' %}onsubmit="return confirm('Die vorhandene eigene Google-Kennung ersetzen?')"{% endif %}><input type="hidden" name="csrf" value="{{ csrf }}"><input type="file" name="file" accept="application/json,.json" required><button>Kennung speichern</button></form>
+</details>
+<details><summary>Zugang läuft nach 7 Tagen ab?</summary>
+<p>Das passiert, solange die App in der Google-Konsole unter „Zielgruppe“ im Status „Test“ steht. Stelle sie dort auf „In Produktion“ und verbinde das Konto danach hier erneut. Beim Anmelden zeigt Google dann den Hinweis, dass die App nicht überprüft ist; über „Erweitert“ geht es weiter.</p>
+</details>
+</div>
+
+<div class="card">
+<h3>Outlook / Hotmail</h3>
+<div class="muted">Du meldest dich bei Microsoft an und erlaubst ausschließlich das Lesen deiner Mails. Gelesen wird der Posteingang.</div>
+<form method="post" action="{{ url_for('connect_start',provider='microsoft') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="primary" {{ 'disabled' if not microsoft }}>Mit Outlook verbinden</button></form>
+<div class="muted">{% if microsoft %}App-Kennung: {{ microsoft['source'] }} ✓{% else %}Es ist noch keine App-Kennung hinterlegt. Einmal einrichten, danach reicht der Knopf.{% endif %}</div>
+<details{{ ' open' if not microsoft }}><summary>{{ 'Eigene Kennung ändern' if microsoft else 'Kennung einmalig einrichten (etwa 10 Minuten)' }}</summary>
+<ol>
+<li>Im <a href="https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noreferrer">Microsoft Entra Admin Center</a> unter „App-Registrierungen“ auf „Neue Registrierung“ klicken.</li>
+<li>Name frei wählen. Unterstützte Kontotypen: „Konten in einem beliebigen Organisationsverzeichnis und persönliche Microsoft-Konten“.</li>
+<li>Umleitungs-URI: Plattform „Öffentlicher Client/nativ (mobil und Desktop)“ und als Adresse <code>{{ ms_redirect }}</code></li>
+<li>Registrieren, dann die „Anwendungs-ID (Client)“ kopieren und hier einfügen. Ein Geheimnis (Client Secret) wird nicht benötigt.</li>
+</ol>
+<form method="post" action="{{ url_for('save_microsoft_client') }}" class="line"><input type="hidden" name="csrf" value="{{ csrf }}">
+<input type="text" name="client_id" placeholder="Anwendungs-ID, z. B. 12345678-abcd-1234-abcd-1234567890ab" autocomplete="off" spellcheck="false">
+<select name="tenant" title="Welche Konten dürfen sich anmelden?"><option value="common">Private und Firmenkonten</option><option value="consumers">Nur private Konten</option></select>
+<button>Kennung speichern</button></form>
+<p class="muted">Leer speichern entfernt die eigene Kennung wieder.</p>
+</details>
+</div>
+</div>
+<p class="muted">Die Anmeldung läuft direkt zwischen deinem Browser und Google bzw. Microsoft. Passwörter sieht diese Anwendung nie. Gespeichert wird nur ein Lesezugang, lokal in <code>private/</code>.</p>
+</main></body></html>

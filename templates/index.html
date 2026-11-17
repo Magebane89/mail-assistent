@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lokaler Mail-Assistent</title>
+<style>
+:root{color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:#f6f8fb;color:#17283b;font-size:14px}
+.wrap{max-width:1280px;margin:auto;padding:14px 20px 60px}
+a{color:#2164a3}
+button,select,input{font:inherit}
+button{padding:6px 11px;border-radius:8px;border:1px solid #d5dfea;background:#fff;color:#273b55;cursor:pointer;font-size:13px;font-weight:600}
+button.primary{background:#126b59;color:#fff;border-color:#126b59}
+button:disabled{cursor:not-allowed;opacity:.4}
+.hidden{display:none!important}
+
+/* Kopfzeile */
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.top h1{font-size:20px;letter-spacing:-.3px;margin:0}
+.top .sub{color:#68798f;font-size:13px}
+.top .spacer{flex:1}
+.kpi{border-radius:100px;padding:5px 12px;font-weight:500;color:#465d7b;background:#fff}
+.kpi b{color:#17283b;font-variant-numeric:tabular-nums}
+span.kpi{border:1px solid #e3e8ee;font-size:13px}
+a.kpi{border:1px solid #d5dfea;font-size:13px;font-weight:600;text-decoration:none;color:#273b55}
+.warn{color:#b3362a}
+.mode{border-radius:100px;font-size:12px;font-weight:700;padding:6px 11px;background:#e7f7ed;color:#16723d}
+.mode.readonly{background:#fdf1e3;color:#956020}
+.flash{padding:9px 12px;background:#e9f3ff;border:1px solid #c2d9fc;border-radius:8px;margin-top:10px}
+.infoline{display:flex;gap:6px 18px;flex-wrap:wrap;align-items:baseline;margin:10px 0 0;color:#61728a;font-size:13px}
+#runbar{vertical-align:middle;width:140px;height:7px;margin:0 4px;accent-color:#126b59}
+details.fold{margin-top:6px;color:#61728a;font-size:13px}
+details.fold>summary{cursor:pointer;list-style:none;display:inline-block}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary:before{content:"▸";display:inline-block;width:14px;color:#8190a2}
+details.fold[open]>summary:before{content:"▾"}
+details.fold>summary b{color:#273b55;font-weight:600}
+.foldbody{background:#fff;border:1px solid #e3e8ee;border-radius:10px;padding:12px 14px;margin:6px 0 2px;line-height:1.5}
+.kigrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.kigrid b{display:block;font-size:20px;letter-spacing:-.3px;color:#17283b;font-variant-numeric:tabular-nums}
+.kigrid span{display:block;color:#465d7b;font-size:13px;font-weight:600}
+.kigrid small{display:block;color:#8190a2;font-size:12px;margin-top:2px;line-height:1.4}
+
+/* Filterleiste */
+.filterbar{position:sticky;top:0;z-index:5;background:#fff;border:1px solid #e3e8ee;border-radius:12px;padding:10px 12px;margin-top:12px;box-shadow:0 4px 14px rgba(30,42,58,.05);display:grid;gap:8px}
+.frow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.frow input[type=search]{flex:1 1 240px;min-width:180px;padding:7px 11px;border:1px solid #d5dfea;border-radius:8px;background:#fbfcfe}
+.frow select{font-size:13px;padding:6px 8px;border:1px solid #d5dfea;border-radius:8px;background:#fff;color:#273b55;max-width:100%}
+.frow select.act{border-color:#17283b;background:#eef2f7;font-weight:600}
+.frow input:focus,.frow select:focus,summary:focus-visible,button:focus-visible{outline:2px solid #9cc3f5;outline-offset:1px}
+.count{color:#68798f;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border-radius:100px;padding:4px 10px;font-size:12.5px;display:inline-flex;gap:6px;align-items:center}
+.chip b{font-size:11px;background:#eef2f7;color:#5e6f86;border-radius:100px;padding:1px 6px;font-variant-numeric:tabular-nums}
+.chip.zero{color:#8190a2;border-style:dashed}
+.chip.on{background:#17283b;color:#fff;border-color:#17283b}
+.chip.on b{background:rgba(255,255,255,.2);color:#fff}
+
+/* Liste */
+.day{margin:16px 2px 5px;font-size:12px;font-weight:750;text-transform:uppercase;letter-spacing:.07em;color:#465d7b;display:flex;align-items:center;gap:10px}
+.day:after{content:"";flex:1;height:1px;background:#dfe6ef}
+.row{background:#fff;border:1px solid #e3e8ee;margin-top:-1px}
+.row.hoch{box-shadow:inset 3px 0 0 #d64b3e}
+.row>summary{display:grid;grid-template-columns:50px 112px minmax(0,1fr) auto;gap:12px;align-items:center;padding:6px 12px 6px 14px;cursor:pointer;list-style:none}
+.row>summary::-webkit-details-marker{display:none}
+.row>summary:hover,.row[open]>summary{background:#f7f9fc}
+.t{line-height:1.2;text-align:right}
+.t b{display:block;font-size:13px;font-variant-numeric:tabular-nums}
+.t i{display:block;font-style:normal;font-size:11px;color:#8190a2;white-space:nowrap}
+.cat{display:inline-block;border:0;border-radius:100px;font-size:11.5px;font-weight:700;padding:3px 9px;white-space:nowrap;cursor:pointer}
+.cat[data-c="Buchhaltung"]{background:#e7f7ed;color:#16723d}.cat[data-c="Projektanfrage"]{background:#efe9ff;color:#5a3fb0}.cat[data-c="Konto & Sicherheit"]{background:#fff4dc;color:#8a5a00}.cat[data-c="Termin"]{background:#e3f6f8;color:#14707c}.cat[data-c="Persönlich"]{background:#fdeaf4;color:#a5376f}.cat[data-c="Newsletter"]{background:#eff1f5;color:#697789}.cat[data-c="Sonstiges"]{background:#f3efe6;color:#7a653a}
+.x{min-width:0}
+.s{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:14px;line-height:1.35;font-weight:500;overflow-wrap:anywhere}
+.row[open] .s{display:block}
+.f{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:#68798f;margin-top:1px}
+.f b{color:#465d7b;font-weight:600}
+.b{display:flex;gap:6px;align-items:center;justify-content:flex-end}
+.tag{border:0;font-size:11px;font-weight:700;border-radius:6px;padding:3px 7px;white-space:nowrap}
+.tag.hoch{background:#ffe9e7;color:#b3362a}
+.tag.review{background:#fef0d9;color:#905800}.tag.sent{background:#e7f7ed;color:#16723d}.tag.ignored{background:#eff1f5;color:#697789}.tag.uncertain,.tag.sending{background:#fff0e7;color:#b44b25}
+.more{border-top:1px dashed #e3e8ee;padding:10px 14px 12px 200px;font-size:13px;line-height:1.5;background:#fbfcfe}
+.kv{display:grid;grid-template-columns:96px minmax(0,1fr);gap:2px 12px;margin:0 0 8px}
+.kv dt{color:#8190a2}.kv dd{margin:0;overflow-wrap:anywhere}
+.note{border-radius:8px;padding:8px 11px;background:#fff8e8;border:1px solid #f0dcad;margin:8px 0}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.actions form{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=file]{font-size:12px;max-width:240px}
+.emptybox{display:none;background:#fff;border:1px solid #e3e8ee;border-radius:10px;padding:14px;margin-top:12px}
+.footer{margin-top:24px;color:#78869a;font-size:12px}
+@media(max-width:900px){.kigrid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){
+ .wrap{padding:10px 10px 50px}
+ .row>summary{grid-template-columns:auto auto minmax(0,1fr);grid-template-areas:"t c b" "x x x";gap:5px 8px;padding:8px 10px 8px 12px}
+ .t{grid-area:t;text-align:left}.t b,.t i{display:inline}.t i{margin-left:4px}
+ .c{grid-area:c}.x{grid-area:x}.b{grid-area:b}
+ .more{padding:10px 12px}
+ .kv{grid-template-columns:1fr}.kv dt{margin-top:4px}
+}
+</style>
+</head>
+<body><main class="wrap">
+{% set n_review = beleg.get('review',0) %}
+<div class="top">
+<h1>Mail-Assistent</h1><span class="sub">100 % lokale KI-Auswertung</span><span class="spacer"></span>
+<button type="button" class="kpi" data-beleg="review" title="Nur Belege mit offener Freigabe anzeigen"><b>{{ n_review }}</b> Belege offen</button>
+<button type="button" class="kpi" data-beleg="sent" title="Nur an sevdesk versendete Belege anzeigen"><b>{{ beleg.get('sent',0) }}</b> versendet</button>
+<span class="kpi"><b>{{ mails|length }}</b> Nachrichten</span>
+<a class="kpi" href="{{ url_for('settings') }}" title="Postfächer verbinden und verwalten">Einstellungen</a>
+<span class="mode {{ '' if can_send else 'readonly' }}">{{ 'Versand nach Klick möglich' if can_send else 'Nur-Lesen-Modus' }}</span>
+</div>
+{% with alerts = get_flashed_messages() %}{% if alerts %}{% for text in alerts %}<div class="flash">{{ text }}</div>{% endfor %}{% endif %}{% endwith %}
+<div class="infoline">
+{% if runinfo %}<span id="runline"><span id="runtext">{{ runinfo['text'] }}</span>{% if runinfo['running'] %} <progress id="runbar" max="{{ runinfo['total'] or 1 }}" value="{{ runinfo['done'] }}"></progress>{% endif %} <a href="{{ url_for('index') }}" id="runreload" style="display:none">Seite neu laden, um die neuen Nachrichten zu sehen</a></span>
+{% else %}<span>Noch kein Scan ausgeführt. Terminal: <code>python assistant_app.py scan</code></span>{% endif %}
+{% if not accounts %}<span class="warn">Kein Postfach verbunden. <a href="{{ url_for('settings') }}">Jetzt verbinden</a></span>{% endif %}
+{% for a in accounts if a['last_error'] %}<span class="warn">⚠ {{ a['email'] or 'Konto' }}: Abruf fehlgeschlagen. <a href="{{ url_for('settings') }}">Details</a></span>{% endfor %}
+</div>
+{% if runinfo %}<script>
+(function(){
+  var running={{ 'true' if runinfo['running'] else 'false' }}, shown={{ mails|length }};
+  var text=document.getElementById('runtext'), bar=document.getElementById('runbar'), link=document.getElementById('runreload');
+  function poll(){
+    fetch('{{ url_for('progress_json') }}',{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){
+      text.textContent=d.text;
+      if(bar){ bar.max=d.total||1; bar.value=d.done; bar.style.display=d.running?'':'none'; }
+      if(d.mails>shown) link.style.display='';
+      running=d.running;
+    }).catch(function(){});
+  }
+  setInterval(poll, running?5000:60000);
+})();
+</script>{% endif %}
+<details class="fold"><summary>{% if llm %}Lokale KI: <b>{{ llm['total_tokens']|zahl }} Token</b> · <b>{{ '%.1f'|format(llm['output_tps'])|replace('.',',') }} Token/s</b> · Ø {{ '%.1f'|format(llm['avg_seconds'])|replace('.',',') }} Sek. pro Mail{% else %}Lokale KI: noch keine Messwerte{% endif %}</summary>
+<div class="foldbody">{% if llm %}<div class="kigrid">
+<div><b>{{ llm['total_tokens']|zahl }}</b><span>Token insgesamt</span><small>{{ llm['prompt_tokens']|zahl }} Eingabe · {{ llm['output_tokens']|zahl }} Ausgabe</small></div>
+<div><b>{{ '%.1f'|format(llm['output_tps'])|replace('.',',') }}</b><span>Token/Sekunde (Ausgabe)</span><small>Eingabe lesen: {{ llm['prompt_tps']|zahl }} Token/s · gesamt: {{ llm['overall_tps']|zahl }} Token/s</small></div>
+<div><b>{{ llm['calls']|zahl }}</b><span>KI-Aufrufe</span><small>Ø {{ llm['avg_tokens']|zahl }} Token und {{ '%.1f'|format(llm['avg_seconds'])|replace('.',',') }} Sek. pro Mail</small></div>
+<div><b>{{ llm['total_seconds']|dauer }}</b><span>Rechenzeit der KI</span><small>Gemessen seit {{ llm['since']|datum }}{% if llm['mails_total'] > llm['calls'] %} · {{ llm['mails_total'] - llm['calls'] }} ältere Mails ohne Messung{% endif %}</small></div>
+</div>{% else %}Die Zählung beginnt mit dem nächsten Scan.{% endif %}</div></details>
+{% if not can_send %}<details class="fold"><summary>Nur-Lesen-Modus: <b>Es kann nichts versendet werden</b></summary>
+<div class="foldbody">Die Erkennung funktioniert, aber selbst ein Freigabeklick kann derzeit keine E-Mail versenden. Später sendet nur eine ausdrücklich bestätigte Aktion an <strong>{{ recipient }}</strong>, vorausgesetzt die Gmail-Adresse ist auch bei sevdesk registriert.</div></details>{% endif %}
+
+{% if not mails %}<div class="emptybox" style="display:block">Noch keine Nachrichten. Starte den ersten Scan im Terminal: <code>python assistant_app.py scan</code></div>{% else %}
+<div class="filterbar" id="filterbar">
+<div class="frow">
+<input type="search" id="q" placeholder="Suchen …" title="Sucht in KI-Bewertung, Betreff und Absender" autocomplete="off">
+<select id="beleg" data-default="" title="Belege">
+<option value="">Alle Nachrichten</option>
+<option value="any">Belegkandidaten ({{ beleg.get('any',0) }})</option>
+<option value="review">Belege: Freigabe offen ({{ n_review }})</option>
+<option value="ignored">Belege: nicht übernommen ({{ beleg.get('ignored',0) }})</option>
+<option value="sent">Belege: versendet ({{ beleg.get('sent',0) }})</option>
+{% if beleg.get('uncertain',0) %}<option value="uncertain">Belege: Status unklar ({{ beleg.get('uncertain',0) }})</option>{% endif %}
+<option value="none">Ohne Belegkandidaten</option>
+</select>
+{% if accounts|length > 1 %}<select id="konto" data-default="" title="Postfach"><option value="">Alle Postfächer</option>{% for a in accounts %}<option value="{{ a['id'] }}">{{ a['email'] or providers.get(a['provider'],'Konto') }}</option>{% endfor %}</select>{% endif %}
+<select id="prio" data-default="" title="Priorität"><option value="">Jede Priorität</option><option value="hoch">Priorität hoch</option><option value="normal">Priorität normal</option><option value="niedrig">Priorität niedrig</option></select>
+<select id="range" data-default="" title="Zeitraum"><option value="">Gesamter Zeitraum</option><option value="0">Heute</option><option value="1">Heute und gestern</option><option value="6">Letzte 7 Tage</option><option value="29">Letzte 30 Tage</option></select>
+<select id="sort" data-default="neu" title="Sortierung"><option value="neu">Neueste zuerst</option><option value="alt">Älteste zuerst</option><option value="prio">Priorität, dann Datum</option></select>
+<button type="button" id="reset">Zurücksetzen</button>
+<span class="count" id="count"></span>
+</div>
+<div class="chips" id="cats"><button type="button" class="chip on" data-cat="">Alle <b>{{ mails|length }}</b></button>{% for cat in categories %}{% set n = mails|selectattr('category','equalto',cat)|list|length %}<button type="button" class="chip{{ ' zero' if not n }}" data-cat="{{ cat }}">{{ cat }} <b>{{ n }}</b></button>{% endfor %}</div>
+</div>
+<div id="list">
+{% set typ = {'attachment':'Anhang','email_pdf':'E-Mail','portal':'Portal'} %}
+{% set stat = {'review':'Freigabe offen','sent':'versendet','ignored':'nicht übernommen','uncertain':'Status unklar','sending':'Versand läuft'} %}
+{% for m in mails %}{% set rc = m['receipt_candidate'] %}{% set acc = acc_by_id.get(m['account_id']) %}{% set link = mail_link(m, acc_by_id) %}
+<details class="row{{ ' hoch' if m['priority']=='hoch' }}" id="m-{{ m['id'] }}" data-cat="{{ m['category'] }}" data-prio="{{ m['priority'] }}" data-beleg="{{ m['status'] if rc else '' }}" data-acc="{{ m['account_id'] or '' }}" data-ts="{{ m['received_at'] }}" data-day="{{ m['received_at']|tag_key }}" data-daytitle="{{ m['received_at']|tag_titel }}">
+<summary>
+<span class="t" title="{{ m['received_at']|datum }}"><b>{{ m['received_at']|uhrzeit }}</b><i>{{ m['received_at']|wochentag }} {{ m['received_at']|tag }}</i></span>
+<span class="c"><button type="button" class="cat" data-c="{{ m['category'] }}" title="Nur {{ m['category'] }} anzeigen">{{ m['category'] }}</button></span>
+<span class="x"><span class="s">{{ m['summary'] }}</span><span class="f"><b>{{ m['sender']|absender }}</b> · {{ m['subject'] }}</span></span>
+<span class="b">{% if rc %}<button type="button" class="tag {{ m['status'] }}" data-b="any" title="Nur Belegkandidaten anzeigen">Beleg · {{ typ.get(m['receipt_type'],'prüfen') if m['status']=='review' else stat.get(m['status'],m['status']) }}</button>{% endif %}{% if m['priority']=='hoch' %}<span class="tag hoch">Hoch</span>{% endif %}</span>
+</summary>
+<div class="more">
+<dl class="kv">
+<dt>Betreff</dt><dd>{{ m['subject'] }}</dd>
+<dt>Von</dt><dd>{{ m['sender'] }}</dd>
+<dt>Empfangen</dt><dd>{{ m['received_at']|datum }}</dd>
+{% if accounts|length > 1 and acc %}<dt>Postfach</dt><dd>{{ acc['email'] }} ({{ providers.get(acc['provider'],acc['provider']) }})</dd>{% endif %}
+<dt>KI-Einordnung</dt><dd>{{ m['category'] }} · Priorität {{ m['priority'] }} · Sicherheit {{ (m['confidence']*100)|round|int }} %</dd>
+{% set attachments = m['filenames']|from_json %}{% if attachments %}<dt>Anhänge</dt><dd>{{ attachments|map(attribute='name')|join(' · ') }}</dd>{% endif %}
+{% if rc %}<dt>Beleg</dt><dd>{{ {'attachment':'PDF / Anhang','email_pdf':'E-Mail ist der Beleg → als PDF','portal':'Rechnung im Anbieterportal abholen'}.get(m['receipt_type'],'Manuell prüfen') }} · {{ stat.get(m['status'],m['status']) }}</dd>{% endif %}
+</dl>
+{% if rc %}
+{% if m['receipt_type']=='portal' %}
+<div class="note"><strong>Portalbeleg:</strong> Anbieter-App oder offizielle Website selbst öffnen, Rechnung als PDF herunterladen und hier hochladen. Keinem Link aus unbekannten E-Mails vertrauen.</div>
+{% if m['id'].startswith('demo-') %}<div>Demo: kein echter Belegupload.</div>{% elif m['status']=='review' %}
+<div class="actions"><form method="post" action="{{ url_for('upload_portal',message_id=m['id']) }}" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="file" name="file" accept="application/pdf,.pdf" required><button type="submit">Portal-PDF speichern</button></form>
+{% if m['id'] in uploaded_portals %}<a href="{{ url_for('preview_portal',message_id=m['id']) }}" target="_blank" rel="noreferrer">Hochgeladenen Portalbeleg ansehen ✓</a>{% else %}<span>Noch keine Portal-PDF hochgeladen.</span>{% endif %}</div>{% endif %}
+{% elif m['receipt_type']=='email_pdf' %}
+<div class="note"><strong>E-Mail-Rechnung:</strong> Vor der Freigabe die PDF-Vorschau prüfen. Sie wird aus dem Text erstellt und kann Layout und Bilder verlieren. Die Original-Mail wird zusätzlich lokal als .eml gespeichert.</div>
+{% if not m['id'].startswith('demo-') %}<a href="{{ url_for('preview_email',message_id=m['id']) }}" target="_blank" rel="noreferrer">PDF erzeugen und Vorschau prüfen{% if m['id'] in prepared_emails %} ✓ bereits vorbereitet{% endif %}</a>{% endif %}
+{% endif %}
+{% if m['status']=='uncertain' %}<div class="note">Möglicherweise versendet. Bitte zuerst Gmail-Gesendet und sevdesk prüfen. Eine erneute Freigabe ist bewusst gesperrt. {{ m['error'] or '' }}</div>{% endif %}
+{% endif %}
+<div class="actions">
+{% if rc and m['status']=='review' %}
+<form method="post" action="{{ url_for('action',message_id=m['id']) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="primary" name="do" value="approve" {{ 'disabled' if not can_send or (acc and acc['provider']!='google') }} title="{{ 'Die Weiterleitung ist bisher nur für Gmail-Konten möglich' if (acc and acc['provider']!='google') else ('Diesen Beleg an sevdesk senden' if can_send else 'Im Nur-Lesen-Modus ist der Versand ausgeschaltet') }}" onclick="return confirm('Diesen geprüften Beleg jetzt an {{ recipient }} senden?')">✓ An sevdesk weiterleiten</button></form>
+<form method="post" action="{{ url_for('action',message_id=m['id']) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="do" value="ignore">Nicht übernehmen</button></form>
+{% elif rc and m['status']=='ignored' %}<form method="post" action="{{ url_for('action',message_id=m['id']) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="do" value="restore">Erneut prüfen</button></form>{% endif %}
+{% if link %}<a href="{{ link }}" rel="noreferrer" target="_blank">Im Postfach öffnen ↗</a>{% endif %}
+</div>
+</div>
+</details>
+{% endfor %}
+</div>
+<div class="emptybox" id="empty">Keine Nachricht passt zu diesem Filter. <button type="button" id="reset2">Zurücksetzen</button></div>
+<script>
+(function(){
+  var list=document.getElementById('list'), items=[].slice.call(list.querySelectorAll('.row'));
+  var q=document.getElementById('q'), beleg=document.getElementById('beleg'), konto=document.getElementById('konto'), prio=document.getElementById('prio'), range=document.getElementById('range'), sort=document.getElementById('sort');
+  var selects=[beleg,konto,prio,range,sort].filter(Boolean);
+  var chips=[].slice.call(document.querySelectorAll('#cats .chip')), count=document.getElementById('count'), empty=document.getElementById('empty');
+  var cats={}, KEY='mailfilter3', rank={hoch:0,normal:1,niedrig:2};
+  items.forEach(function(el){ el._text=el.textContent.toLowerCase(); el._ts=Date.parse(el.dataset.ts)||0; });
+  function save(){ try{ sessionStorage.setItem(KEY,JSON.stringify({q:q.value,k:konto?konto.value:'',b:beleg.value,p:prio.value,r:range.value,s:sort.value,c:Object.keys(cats)})); }catch(e){} }
+  function load(){ try{ var s=JSON.parse(sessionStorage.getItem(KEY)||'null'); if(!s) return; q.value=s.q||''; if(konto){ konto.value=s.k||''; if(konto.selectedIndex<0) konto.value=''; } beleg.value=s.b||''; prio.value=s.p||''; range.value=s.r||''; sort.value=s.s||'neu'; (s.c||[]).forEach(function(c){cats[c]=1;}); }catch(e){} }
+  function belegOk(v){ var b=beleg.value; return !b || (b==='any'? !!v : b==='none'? !v : v===b); }
+  function apply(){
+    var words=q.value.toLowerCase().split(/\s+/).filter(Boolean), anyCat=Object.keys(cats).length>0, since=0;
+    if(range.value!==''){ var d=new Date(); d.setHours(0,0,0,0); since=d.getTime()-Number(range.value)*86400000; }
+    chips.forEach(function(c){ c.classList.toggle('on', c.dataset.cat===''? !anyCat : !!cats[c.dataset.cat]); });
+    selects.forEach(function(s){ s.classList.toggle('act', s.value!==s.dataset.default); });
+    var order=items.slice().sort(function(a,b){
+      if(sort.value==='alt') return a._ts-b._ts;
+      if(sort.value==='prio'){ var r=(rank[a.dataset.prio]||0)-(rank[b.dataset.prio]||0); if(r) return r; }
+      return b._ts-a._ts; });
+    [].slice.call(list.querySelectorAll('.day')).forEach(function(n){ n.remove(); });
+    var shown=0, lastDay=null;
+    order.forEach(function(el){
+      var ok=(!anyCat||cats[el.dataset.cat])&&belegOk(el.dataset.beleg)&&(!konto||!konto.value||el.dataset.acc===konto.value)&&(!prio.value||el.dataset.prio===prio.value)&&(!since||el._ts>=since)&&words.every(function(w){return el._text.indexOf(w)>=0;});
+      el.classList.toggle('hidden',!ok); list.appendChild(el);
+      if(ok){ shown++;
+        if(sort.value!=='prio' && el.dataset.day!==lastDay){ lastDay=el.dataset.day; var h=document.createElement('div'); h.className='day'; h.textContent=el.dataset.daytitle; list.insertBefore(h,el); } }
+    });
+    count.textContent=shown===items.length? shown+' Nachrichten' : shown+' von '+items.length;
+    empty.style.display=shown?'none':'block'; save();
+  }
+  function reset(){ q.value=''; if(konto) konto.value=''; beleg.value=''; prio.value=''; range.value=''; sort.value='neu'; cats={}; apply(); }
+  function top(){ document.getElementById('filterbar').scrollIntoView({block:'nearest'}); }
+  chips.forEach(function(c){ c.addEventListener('click',function(){ var k=c.dataset.cat; if(k==='') cats={}; else if(cats[k]) delete cats[k]; else cats[k]=1; apply(); }); });
+  list.addEventListener('click',function(e){
+    var c=e.target.closest('.cat'), b=e.target.closest('.tag[data-b]');
+    if(c){ e.preventDefault(); cats={}; cats[c.dataset.c]=1; apply(); top(); }
+    else if(b){ e.preventDefault(); beleg.value=b.dataset.b; apply(); top(); }
+  });
+  [].slice.call(document.querySelectorAll('.kpi[data-beleg]')).forEach(function(k){ k.addEventListener('click',function(){ reset(); beleg.value=k.dataset.beleg; apply(); top(); }); });
+  [q].concat(selects).forEach(function(el){ el.addEventListener('input',apply); });
+  document.getElementById('reset').addEventListener('click',reset); document.getElementById('reset2').addEventListener('click',reset);
+  load(); apply();
+  if(location.hash.indexOf('#m-')===0){ var el=document.getElementById(location.hash.slice(1)); if(el){ el.classList.remove('hidden'); el.open=true; el.scrollIntoView({block:'center'}); } }
+})();
+</script>
+{% endif %}
+<div class="footer">Lokal unter 127.0.0.1 · Keine automatische Weiterleitung · Originalnachrichten bleiben im Postfach · E-Mail-PDFs enthalten eine lesbare Textdarstellung, keine pixelgenaue Kopie · Portallogin manuell · Manuelle Freigabe vor Versand</div>
+</main></body></html>

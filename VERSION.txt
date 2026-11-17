@@ -1,0 +1,13 @@
+0.3.0 – 2026-11-16
+Mehrere Postfächer: „Mit Google verbinden“ und „Mit Outlook verbinden“ im Dashboard (OAuth mit PKCE, nur lesend).
+Kompakte Liste mit Filtern für Belege, Kategorie, Priorität, Zeitraum und Postfach.
+Kategorie „Wichtig“ durch „Konto & Sicherheit“ ersetzt; Dringlichkeit nur noch über die Priorität.
+Neuer Befehl „reclassify“; Statistik der lokalen KI; Live-Fortschritt des Scans.
+Formularschutz (CSRF) verschärft. Lizenz: GPL-3.0-or-later.
+
+0.2.0 – 2026-11-13
+Neuer receipt_type: attachment | email_pdf | portal.
+Email-Rechnung: lesbare PDF + lokal gesichertes EML, Vorschau vor Versand.
+Portal-Rechnung: Hinweis-Liste, manueller Download und PDF-Upload.
+Kein automatischer Login und keine automatische Weiterleitung.
+Read-only bleibt Standard.

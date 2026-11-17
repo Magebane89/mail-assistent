@@ -1,0 +1,9 @@
+{
+  "_hinweis": "App-Kennung des Projekts für 'Mit Google verbinden'. Keine Zugangsdaten zu Postfächern. Eine eigene Kennung in private/ hat Vorrang.",
+  "google": {
+    "installed": {
+      "client_id": "980188731675-n1t4f94it4r11sv46kto1k1v9es9mran.apps.googleusercontent.com",
+      "client_secret": "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"
+    }
+  }
+}
