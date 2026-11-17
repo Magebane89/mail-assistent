@@ -847,6 +847,267 @@ def create_email_pdf(msg: dict[str, Any]) -> bytes:
     return buf.getvalue()
 
 
+# --- Originalgetreue PDF aus der HTML-Mail ------------------------------------------------------
+# Die HTML-Fassung der Mail wird bereinigt (keine Skripte, keine Formulare, keine Netzzugriffe aus
+# dem Dokument) und mit einem lokal installierten Chrome/Chromium/Edge ohne Kopf-/Fußzeile gedruckt.
+# Bilder: eingebettete (cid:) direkt aus der Mail; externe werden vorab von diesem Programm geladen
+# (abschaltbar mit PDF_LOAD_IMAGES=0) und als data:-URI eingesetzt. Fehlt Chrome oder HTML, bleibt
+# die bisherige Textdarstellung als Rückfall.
+
+CHROME_CANDIDATES = [
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+    '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+]
+DROP_TAGS = {'script', 'iframe', 'frame', 'frameset', 'object', 'embed', 'applet', 'form', 'base',
+             'link', 'meta', 'noscript', 'audio', 'video', 'source', 'track', 'svg', 'math', 'template'}
+VOID_TAGS = {'area', 'br', 'col', 'hr', 'img', 'input', 'wbr', 'link', 'meta', 'base', 'source', 'track', 'embed'}
+CSS_URL_RE = re.compile(r'''url\(\s*(['"]?)([^'")]+)\1\s*\)''', re.I)
+MAX_IMAGES = 40
+MAX_IMAGE_BYTES = 3 * 1024 * 1024
+
+
+def find_chrome() -> str | None:
+    import shutil
+    own = config('CHROME_PATH')
+    if own and Path(own).is_file():
+        return own
+    for path in CHROME_CANDIDATES:
+        if Path(path).is_file():
+            return path
+    for name in ('google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'microsoft-edge'):
+        found = shutil.which(name)
+        if found:
+            return found
+    return None
+
+
+def _public_host(host: str) -> bool:
+    """Bilder nur von öffentlichen Adressen laden, nie von localhost oder dem Heimnetz."""
+    import ipaddress, socket
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except OSError:
+        return False
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if not ip.is_global:
+            return False
+    return bool(infos)
+
+
+class ImageLoader:
+    def __init__(self, cid_images: dict[str, tuple[str, bytes]], allow_remote: bool):
+        self.cid = cid_images
+        self.allow_remote = allow_remote
+        self.cache: dict[str, str] = {}
+        self.loaded = 0
+
+    def data_uri(self, src: str) -> str:
+        src = src.strip()
+        if src in self.cache:
+            return self.cache[src]
+        result = ''
+        if src.lower().startswith('data:image/'):
+            result = src
+        elif src.lower().startswith('cid:'):
+            found = self.cid.get(src[4:].strip('<>').casefold())
+            if found:
+                result = f"data:{found[0]};base64,{base64.b64encode(found[1]).decode()}"
+        elif src.lower().startswith(('http://', 'https://', '//')) and self.allow_remote and self.loaded < MAX_IMAGES:
+            result = self._fetch('https:' + src if src.startswith('//') else src)
+        self.cache[src] = result
+        return result
+
+    def _fetch(self, url: str) -> str:
+        from urllib.parse import urljoin, urlsplit
+        self.loaded += 1
+        try:
+            for _ in range(4):   # Weiterleitungen selbst verfolgen, damit jede Zieladresse geprüft wird
+                parts = urlsplit(url)
+                if parts.scheme not in ('http', 'https') or not parts.hostname or not _public_host(parts.hostname):
+                    return ''
+                resp = requests.get(url, timeout=10, stream=True, allow_redirects=False,
+                                    headers={'User-Agent': 'Mozilla/5.0 (Mail-Assistent PDF)', 'Accept': 'image/*'})
+                if resp.is_redirect:
+                    url = urljoin(url, resp.headers.get('location', ''))
+                    resp.close()
+                    continue
+                mime = resp.headers.get('content-type', '').split(';')[0].strip().lower()
+                if resp.status_code != 200 or not mime.startswith('image/') or 'svg' in mime:
+                    return ''
+                body = b''
+                for chunk in resp.iter_content(65536):
+                    body += chunk
+                    if len(body) > MAX_IMAGE_BYTES:
+                        return ''
+                return f"data:{mime};base64,{base64.b64encode(body).decode()}"
+        except requests.RequestException:
+            return ''
+        return ''
+
+    def css(self, text: str) -> str:
+        return CSS_URL_RE.sub(lambda m: f"url('{self.data_uri(m.group(2))}')" if self.data_uri(m.group(2)) else 'none', text)
+
+
+class SafeHtml(HTMLParser):
+    """Schreibt die Mail-HTML ohne aktive Inhalte neu; Bilder werden zu data:-URIs."""
+
+    def __init__(self, images: ImageLoader):
+        super().__init__(convert_charrefs=False)
+        self.images = images
+        self.out: list[str] = []
+        self.skip = 0          # Tiefe innerhalb entfernter Elemente
+        self.in_style = False
+
+    def _attrs(self, tag: str, attrs) -> str:
+        from html import escape
+        keep = []
+        for name, value in attrs:
+            name = name.lower()
+            value = value or ''
+            if name.startswith('on') or name in ('srcset', 'formaction', 'action', 'ping', 'http-equiv'):
+                continue
+            low = value.strip().lower()
+            if low.startswith(('javascript:', 'vbscript:')):
+                continue
+            if name == 'style':
+                value = self.images.css(value)
+            elif name == 'background':
+                value = self.images.data_uri(value)
+                if not value:
+                    continue
+            elif tag == 'img' and name == 'src':
+                value = self.images.data_uri(value)
+                if not value:
+                    continue
+            keep.append(f' {name}="{escape(value, quote=True)}"')
+        return ''.join(keep)
+
+    def handle_starttag(self, tag, attrs):
+        if self.skip or tag in DROP_TAGS:
+            if tag not in VOID_TAGS:
+                self.skip += 1
+            return
+        if tag == 'style':
+            self.in_style = True
+        self.out.append(f'<{tag}{self._attrs(tag, attrs)}>')
+
+    def handle_startendtag(self, tag, attrs):
+        if self.skip or tag in DROP_TAGS:
+            return
+        self.out.append(f'<{tag}{self._attrs(tag, attrs)}>')
+
+    def handle_endtag(self, tag):
+        if self.skip:
+            if tag not in VOID_TAGS:
+                self.skip -= 1
+            return
+        if tag in DROP_TAGS:
+            return
+        if tag == 'style':
+            self.in_style = False
+        self.out.append(f'</{tag}>')
+
+    def handle_data(self, data):
+        if self.skip:
+            return
+        self.out.append(self.images.css(data).replace('@import', '') if self.in_style else data)
+
+    def handle_entityref(self, name):
+        if not self.skip:
+            self.out.append(f'&{name};')
+
+    def handle_charref(self, name):
+        if not self.skip:
+            self.out.append(f'&#{name};')
+
+    def handle_comment(self, data):
+        pass
+
+    def handle_decl(self, decl):
+        pass
+
+
+def _local_time(iso: str) -> str:
+    try:
+        return datetime.fromisoformat(iso).astimezone().strftime('%d.%m.%Y %H:%M')
+    except (TypeError, ValueError):
+        return str(iso or '')
+
+
+def mail_html_document(raw: bytes, meta: dict[str, Any]) -> str | None:
+    """Baut aus der Original-MIME-Nachricht ein in sich geschlossenes, druckfertiges HTML-Dokument."""
+    import email
+    from email import policy
+    from html import escape
+    parsed = email.message_from_bytes(raw, policy=policy.default)
+    part = parsed.get_body(('html',))
+    if part is None:
+        return None
+    try:
+        html_text = part.get_content()
+    except (LookupError, ValueError):
+        html_text = (part.get_payload(decode=True) or b'').decode('utf-8', errors='replace')
+    cid: dict[str, tuple[str, bytes]] = {}
+    for p in parsed.walk():
+        content_id = str(p.get('Content-ID') or '').strip().strip('<>').casefold()
+        if content_id and p.get_content_maintype() == 'image':
+            data = p.get_payload(decode=True) or b''
+            if data and len(data) <= MAX_IMAGE_BYTES and p.get_content_subtype() != 'svg+xml':
+                cid[content_id] = (p.get_content_type(), data)
+    cleaner = SafeHtml(ImageLoader(cid, config('PDF_LOAD_IMAGES', '1') == '1'))
+    cleaner.feed(html_text)
+    cleaner.close()
+    body = ''.join(cleaner.out)
+    head = (f'<div class="ma-kopf"><b>E-Mail-Beleg</b> · {escape(str(meta.get("sender", "")))}<br>'
+            f'{escape(str(meta.get("subject", "")))} · empfangen {escape(_local_time(str(meta.get("received_at", ""))))}</div>')
+    return ('<!doctype html><html><head><meta charset="utf-8">'
+            '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; '
+            'style-src \'unsafe-inline\'; font-src data:">'
+            '<style>@page{size:A4;margin:10mm}html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+            '.ma-kopf{font:9px/1.4 -apple-system,Helvetica,Arial,sans-serif;color:#5b6470;'
+            'border-bottom:1px solid #d5d9df;padding:0 0 6px;margin:0 0 10px}'
+            'img{max-width:100%;height:auto}table{max-width:100%}</style></head><body>'
+            + head + body + '</body></html>')
+
+
+def render_html_pdf(document: str) -> bytes:
+    import shutil, subprocess, tempfile
+    chrome = find_chrome()
+    if not chrome:
+        raise RuntimeError('Kein Chrome, Chromium oder Edge gefunden')
+    work = Path(tempfile.mkdtemp(prefix='pdf-', dir=PRIVATE))
+    try:
+        page = work / 'mail.html'
+        out = work / 'mail.pdf'
+        page.write_text(document, encoding='utf-8')
+        cmd = [chrome, '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+               '--disable-extensions', '--disable-background-networking', '--disable-sync',
+ f'--user-data-dir={work / "profil"}',
+               '--no-pdf-header-footer', f'--print-to-pdf={out}', page.as_uri()]
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=90, check=False)
+        data = out.read_bytes() if out.is_file() else b''
+        if not data.startswith(b'%PDF-'):
+            raise RuntimeError('Chrome hat keine PDF erzeugt')
+        return data
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def build_receipt_pdf(raw: bytes, message: dict[str, Any]) -> bytes:
+    """Originalgetreu, wenn möglich; sonst die Textdarstellung."""
+    if raw:
+        try:
+            document = mail_html_document(raw, message)
+            if document:
+                return render_html_pdf(document)
+        except Exception as exc:
+            print(f'Originalgetreue PDF nicht möglich ({str(exc)[:120]}), nutze Textdarstellung.', file=sys.stderr)
+    return create_email_pdf(message)
+
+
 def safe_message_id(message_id: str) -> str:
     if not re.fullmatch(r'[A-Za-z0-9_-]{5,100}',message_id):
         raise RuntimeError('Ungültige Nachrichtenkennung')
@@ -865,15 +1126,14 @@ def archive_email_pdf(api, message_id: str) -> Path:
         raise RuntimeError('Keine zur Vorschau markierte E-Mail-Rechnung')
     box, remote_id = box_for_mail(message_id, api)
     message=box.fetch(remote_id, skip_sent=False)
-    result=create_email_pdf(message)
-    if len(result)>MAX_FILE_BYTES:raise RuntimeError('Generierte PDF ist zu groß')
-    dest=email_pdf_path(message_id)
     # EML enthält die originale MIME-Nachricht und wird nicht in sevdesk verschickt.
     eml=SOURCE_EMAILS / (safe_message_id(message_id)+'.eml')
-    if not eml.exists():
-        raw=box.raw(remote_id)
-        if raw:
-            eml.write_bytes(raw);os.chmod(eml,0o600)
+    raw=eml.read_bytes() if eml.exists() else box.raw(remote_id)
+    if raw and not eml.exists():
+        eml.write_bytes(raw);os.chmod(eml,0o600)
+    result=build_receipt_pdf(raw,message)
+    if len(result)>MAX_FILE_BYTES:raise RuntimeError('Generierte PDF ist zu groß')
+    dest=email_pdf_path(message_id)
     tmp=dest.with_suffix('.tmp')
     tmp.write_bytes(result)
     os.chmod(tmp,0o600)

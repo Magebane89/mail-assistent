@@ -14,7 +14,7 @@ Keine Cloud, kein Server des Entwicklers: Deine Mails verlassen den Rechner nur,
 - **Einordnung durch lokale KI** mit [Ollama](https://ollama.com): Kategorie (Thema), Priorität (Dringlichkeit) und eine Zusammenfassung in einem Satz.
   - Kategorien: Projektanfrage, Termin, Buchhaltung, Konto & Sicherheit, Persönlich, Newsletter, Sonstiges.
   - Priorität: hoch, normal, niedrig.
-- **Belegerkennung** in drei Arten: PDF oder Bild im Anhang, Rechnung im Mailtext (wird als PDF erzeugt, du prüfst die Vorschau) oder Rechnung im Anbieterportal (du lädst sie selbst herunter und hoch).
+- **Belegerkennung** in drei Arten: PDF oder Bild im Anhang, Rechnung im Mailtext (wird im Original-Layout samt Bildern als PDF gedruckt, du prüfst die Vorschau) oder Rechnung im Anbieterportal (du lädst sie selbst herunter und hoch).
 - **Kompakte Übersicht**: eine Liste mit Suche, Kategorie-Chips und Filtern für Belege, Priorität, Zeitraum und Postfach. Details klappen pro Zeile auf.
 - **Optionale Weiterleitung an sevdesk**: ab Werk aus. Jeder Beleg geht erst nach Klick und Bestätigung raus. Automatisches Senden gibt es im Code nicht.
 - **Lokale Statistik** der KI: Token und Token pro Sekunde.
@@ -32,6 +32,7 @@ Keine Cloud, kein Server des Entwicklers: Deine Mails verlassen den Rechner nur,
 
 - Python 3.11 oder neuer (empfohlen 3.12)
 - [Ollama](https://ollama.com/download) mit einem Modell, das strukturierte Ausgabe beherrscht, Standard `qwen3.5:9b` (etwa 7,6 GB; 16 GB Arbeitsspeicher empfohlen)
+- Google Chrome, Chromium oder Edge (optional, für Rechnungen im Mailtext; ohne entsteht eine reine Text-PDF)
 - Ein Gmail- und/oder Outlook.com-Postfach
 
 ## Installation
@@ -112,6 +113,8 @@ sevdesk nimmt Belege an `autobox@sevdesk.email` nur von der Adresse an, mit der 
 | `ENABLE_SEND` | `0` | `1` erlaubt die Weiterleitung nach Klick |
 | `AUTO_SEND` | `0` | Sicherheitssperre, muss `0` bleiben |
 | `PAPERCLIP_WEBHOOK_SECRET` | leer | Optional: Scans aus [Paperclip](https://docs.paperclip.ing/) auslösen |
+| `PDF_LOAD_IMAGES` | `1` | Externe Bilder (Logos) in Rechnungs-PDFs laden; `0` = nur eingebettete Bilder, der Absender sieht dann nicht, dass die Mail geöffnet wurde |
+| `CHROME_PATH` | leer | Pfad zu Chrome/Chromium/Edge, falls nicht automatisch gefunden |
 | `WEB_PORT` | `8765` | Port der Übersicht |
 
 ## Wo die Daten liegen

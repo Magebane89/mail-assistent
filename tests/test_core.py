@@ -189,5 +189,41 @@ class CoreTests(unittest.TestCase):
         self.assertIn('Konto & Sicherheit',appmod.VALID_CATEGORIES)
         self.assertNotIn('Wichtig',appmod.VALID_CATEGORIES)
 
+    def _mime(self, html):
+        from email.message import EmailMessage
+        m=EmailMessage(); m['From']='a@example.org'; m['Subject']='Rechnung'
+        m.set_content('Text'); m.add_alternative(html,subtype='html')
+        m.get_payload()[1].add_related(b'\x89PNG fake',maintype='image',subtype='png',cid='<logo1>')
+        return m.as_bytes()
+
+    def test_html_pdf_document_is_inert(self):
+        html=('<html><body onload="x()"><script>alert(1)</script><iframe src="https://e.example"></iframe>'
+              '<a href="javascript:alert(1)">x</a><img src="cid:logo1"><img src="https://img.example/t.gif">'
+              '<form action="https://e.example"><input></form><p style="background:url(https://img.example/b.png)">Summe 9,99</p></body></html>')
+        with patch.dict(appmod.os.environ,{'PDF_LOAD_IMAGES':'0'}), patch.object(appmod.requests,'get') as net:
+            doc=appmod.mail_html_document(self._mime(html),{'sender':'<b>A</b>','subject':'S','received_at':'2026-11-13T10:00:00+00:00'})
+            net.assert_not_called()
+        low=doc.lower()
+        for bad in ('<script','onload','<iframe','javascript:','<form','https://img.example'):
+            self.assertNotIn(bad,low)
+        self.assertIn('data:image/png;base64,',doc)        # eingebettetes cid-Bild
+        self.assertIn("default-src 'none'",doc)             # Dokument darf selbst nichts laden
+        self.assertIn('&lt;b&gt;A&lt;/b&gt;',doc)           # Kopfzeile escaped
+        self.assertIn('Summe 9,99',doc)
+
+    def test_remote_images_only_from_public_hosts(self):
+        loader=appmod.ImageLoader({},True)
+        with patch.object(appmod.requests,'get') as net:
+            for url in ('http://127.0.0.1:8765/x.png','http://localhost/x.png','http://192.168.1.1/x.png','ftp://e.example/x.png'):
+                self.assertEqual(loader.data_uri(url),'')
+            net.assert_not_called()
+
+    def test_receipt_pdf_falls_back_to_text(self):
+        msg={'sender':'a@example.org','subject':'Rechnung','received_at':'2026-11-13T10:00:00+00:00',
+             'body':'Rechnung Nr. 1, Betrag 9,99 EUR, zahlbar sofort. '*3}
+        with patch.object(appmod,'find_chrome',return_value=None):
+            pdf=appmod.build_receipt_pdf(self._mime('<p>Rechnung</p>'),msg)
+        self.assertTrue(pdf.startswith(b'%PDF-'))
+
 if __name__=='__main__':
     unittest.main()

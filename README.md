@@ -14,7 +14,7 @@ No cloud, no server of ours: your mail never leaves your computer except for wha
 - **Local AI categorization** with [Ollama](https://ollama.com): category (topic), priority (urgency) and a one-sentence summary per message.
   - Categories: Projektanfrage (project inquiry), Termin (appointment), Buchhaltung (accounting), Konto & Sicherheit (account & security), Persönlich (personal), Newsletter, Sonstiges (other).
   - Priority: hoch / normal / niedrig (high / normal / low).
-- **Receipt detection** in three kinds: PDF/image attachment, invoice in the email body (turned into a PDF you preview first), or invoice in a provider portal (you download it yourself and upload it).
+- **Receipt detection** in three kinds: PDF/image attachment, invoice in the email body (printed to PDF in its original layout including images, which you preview first), or invoice in a provider portal (you download it yourself and upload it).
 - **Compact dashboard**: one list with search, category chips, filters for receipts, priority, period and mailbox; details expand per row.
 - **Optional forwarding to sevdesk**: off by default. Each receipt is sent only after you click and confirm. No automatic sending exists in the code.
 - **Local statistics** of the LLM: tokens and tokens per second.
@@ -32,6 +32,7 @@ No cloud, no server of ours: your mail never leaves your computer except for wha
 
 - Python 3.11 or newer (3.12 recommended)
 - [Ollama](https://ollama.com/download) with a model that supports structured output, default `qwen3.5:9b` (about 7.6 GB; 16 GB RAM recommended)
+- Google Chrome, Chromium or Edge (optional, for invoices in the email body; without it a plain-text PDF is created)
 - A Gmail and/or Outlook.com mailbox
 
 ## Installation
@@ -112,6 +113,8 @@ sevdesk accepts receipts at `autobox@sevdesk.email` only from the address regist
 | `ENABLE_SEND` | `0` | `1` enables forwarding after click |
 | `AUTO_SEND` | `0` | Safety lock, must stay `0` |
 | `PAPERCLIP_WEBHOOK_SECRET` | empty | Optional: trigger scans from [Paperclip](https://docs.paperclip.ing/) |
+| `PDF_LOAD_IMAGES` | `1` | Load external images (logos) into invoice PDFs; `0` = embedded images only, so the sender cannot see that the mail was opened |
+| `CHROME_PATH` | empty | Path to Chrome/Chromium/Edge if not found automatically |
 | `WEB_PORT` | `8765` | Dashboard port |
 
 ## Where data is stored
